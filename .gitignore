@@ -9,7 +9,7 @@ data/
 *.db-*
 .DS_Store
 
-# Local ops (private host/DNS/Mylo wiring)
+# Local ops (private host/DNS wiring)
 docs/VPS.md
 
 # Local agent state
