@@ -1,0 +1,19 @@
+node_modules/
+dist/
+web/dist/
+data/
+.env
+.env.*
+!.env.example
+*.db
+*.db-*
+.DS_Store
+
+# Local ops (private host/DNS/Mylo wiring)
+docs/VPS.md
+
+# Local agent state
+.commandcode/
+
+# Local deploy tooling (host/DNS/Caddy specifics)
+deploy/

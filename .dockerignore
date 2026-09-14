@@ -1,0 +1,15 @@
+node_modules
+dist
+web/dist
+data
+.git
+.env
+.env.*
+!.env.example
+*.db
+*.db-*
+.DS_Store
+deploy
+docs
+*.md
+!README.md

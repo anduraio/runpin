@@ -1,0 +1,32 @@
+services:
+  api:
+    build: .
+    command: ["node", "dist/api/index.js"]
+    ports:
+      - "3000:3000"
+    environment:
+      RUNPIN_API_KEY: ${RUNPIN_API_KEY:-dev-api-key}
+      DATABASE_PATH: /app/data/runpin.db
+      PORT: "3000"
+    volumes:
+      - runpin-data:/app/data
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: ["node", "dist/worker/index.js"]
+    environment:
+      RUNPIN_API_KEY: ${RUNPIN_API_KEY:-dev-api-key}
+      DATABASE_PATH: /app/data/runpin.db
+      WORKER_ID: worker-1
+      WORKER_POLL_MS: "1000"
+      WORKER_LEASE_SEC: "60"
+      SCHEDULER_TICK_MS: "15000"
+    volumes:
+      - runpin-data:/app/data
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  runpin-data:
