@@ -1,22 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
-import { api, Schedule } from "../api";
-
-const TYPES = [
-  "template.finder",
-  "template.watcher",
-  "template.collector",
-  "template.repeater",
-  "template.brief",
-  "template.compare",
-  "template.filter",
-  "template.delivery",
-  "echo",
-  "http_callback",
-  "hunt.jobs",
-  "hunt.icp",
-  "hunt.linkedin",
-  "notify.webhook",
-];
+import { api, fetchHandlers, Schedule } from "../api";
+import { BUILTIN_TYPES, mergeHandlerTypes, setHandlerTitles } from "../tools";
 
 export default function Schedules() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -24,6 +8,7 @@ export default function Schedules() {
   const [name, setName] = useState("");
   const [cron, setCron] = useState("0 * * * *");
   const [jobType, setJobType] = useState("echo");
+  const [types, setTypes] = useState(BUILTIN_TYPES);
   const [payload, setPayload] = useState("{}");
 
   async function load() {
@@ -37,6 +22,15 @@ export default function Schedules() {
   }
 
   useEffect(() => {
+    (async () => {
+      try {
+        const { handlers } = await fetchHandlers();
+        setHandlerTitles(handlers);
+        setTypes(mergeHandlerTypes(handlers));
+      } catch {
+        /* vendor handlers are optional — keep the builtins */
+      }
+    })();
     load();
     const t = setInterval(load, 5000);
     return () => clearInterval(t);
@@ -113,7 +107,7 @@ export default function Schedules() {
         </div>
         <label>Job type</label>
         <select value={jobType} onChange={(e) => setJobType(e.target.value)}>
-          {TYPES.map((t) => (
+          {types.map((t) => (
             <option key={t} value={t}>
               {t}
             </option>

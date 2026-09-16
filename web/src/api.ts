@@ -157,6 +157,17 @@ export async function fetchPack(id: string) {
   return api<PackManifestDto>(`/v1/packs/${encodeURIComponent(id)}`);
 }
 
+export type HandlerDto = {
+  type: string;
+  source: "builtin" | "vendor";
+  title?: string;
+};
+
+/** Registered job types — builtins plus the instance's vendor handlers. */
+export async function fetchHandlers() {
+  return api<{ handlers: HandlerDto[] }>("/v1/handlers");
+}
+
 export async function applyToListing(jobId: string, listingId: string) {
   return api<{
     action: JobAction;

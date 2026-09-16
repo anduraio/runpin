@@ -4,6 +4,27 @@
  */
 import { getPack } from "./packs";
 
+/**
+ * Job types the engine ships with. Vendor handlers (docs/VENDOR-HANDLERS.md)
+ * are appended per instance by `mergeHandlerTypes`, since they are config.
+ */
+export const BUILTIN_TYPES = [
+  "template.finder",
+  "template.watcher",
+  "template.collector",
+  "template.repeater",
+  "template.brief",
+  "template.compare",
+  "template.filter",
+  "template.delivery",
+  "echo",
+  "http_callback",
+  "hunt.jobs",
+  "hunt.icp",
+  "hunt.linkedin",
+  "notify.webhook",
+];
+
 /** Display names for legacy job types, so old rows and routines stay readable. */
 export const LEGACY_TYPE_LABELS: Record<string, string> = {
   "template.finder": "Finder",
@@ -22,8 +43,32 @@ export const LEGACY_TYPE_LABELS: Record<string, string> = {
   http_callback: "HTTP callback",
 };
 
+const HANDLER_TITLES = new Map<string, string>();
+
+/** Remember vendor handler titles reported by GET /v1/handlers. */
+export function setHandlerTitles(
+  handlers: { type: string; title?: string }[]
+): void {
+  for (const handler of handlers) {
+    if (handler.title) HANDLER_TITLES.set(handler.type, handler.title);
+  }
+}
+
+/** Builtin types plus whatever vendor handlers this instance registered. */
+export function mergeHandlerTypes(handlers: { type: string }[]): string[] {
+  const extra = handlers
+    .map((handler) => handler.type)
+    .filter((type) => !BUILTIN_TYPES.includes(type));
+  return [...BUILTIN_TYPES, ...extra];
+}
+
 export function toolTitle(id: string): string {
-  return getPack(id)?.title ?? LEGACY_TYPE_LABELS[id] ?? id;
+  return (
+    getPack(id)?.title ??
+    LEGACY_TYPE_LABELS[id] ??
+    HANDLER_TITLES.get(id) ??
+    id
+  );
 }
 
 /** Human schedule text for Routines (avoid saying "cron"). */

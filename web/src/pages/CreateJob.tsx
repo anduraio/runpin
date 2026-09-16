@@ -1,30 +1,27 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../api";
-
-const TYPES = [
-  "template.finder",
-  "template.watcher",
-  "template.collector",
-  "template.repeater",
-  "template.brief",
-  "template.compare",
-  "template.filter",
-  "template.delivery",
-  "echo",
-  "http_callback",
-  "hunt.jobs",
-  "hunt.icp",
-  "hunt.linkedin",
-  "notify.webhook",
-];
+import { api, fetchHandlers } from "../api";
+import { BUILTIN_TYPES, mergeHandlerTypes, setHandlerTitles } from "../tools";
 
 export default function CreateJob() {
   const [type, setType] = useState("echo");
+  const [types, setTypes] = useState(BUILTIN_TYPES);
   const [payload, setPayload] = useState('{\n  "hello": "world"\n}');
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const nav = useNavigate();
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { handlers } = await fetchHandlers();
+        setHandlerTitles(handlers);
+        setTypes(mergeHandlerTypes(handlers));
+      } catch {
+        /* vendor handlers are optional — keep the builtins */
+      }
+    })();
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -56,7 +53,7 @@ export default function CreateJob() {
       <form className="card" onSubmit={onSubmit}>
         <label>Type</label>
         <select value={type} onChange={(e) => setType(e.target.value)}>
-          {TYPES.map((t) => (
+          {types.map((t) => (
             <option key={t} value={t}>
               {t}
             </option>

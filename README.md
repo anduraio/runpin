@@ -15,6 +15,7 @@ Runpin is **engine-only**: there is no shelf of ready-made tools and no tool bui
   - **Simple**: Home (queue shortcuts) + Routines (friendly schedules) + **Activity** board
   - **Advanced**: Jobs table, JSON create job, cron schedules
 - **Custom job types** as packs — registered over the API; see [docs/PACK-SDK.md](docs/PACK-SDK.md)
+- **Vendor handlers** — a job type backed by a module you install next to the worker, named by `VENDOR_HANDLERS`; see [docs/VENDOR-HANDLERS.md](docs/VENDOR-HANDLERS.md)
 - **Concurrency**: per-tool setting plus a `WORKER_CONCURRENCY` process cap
 
 ## Web UI: Simple vs Advanced
@@ -25,7 +26,7 @@ Public marketing lives at **`/`**. After login you land on **Home** (`/app`) —
 - **Routines** (`/routines`) — pause/resume/delete cron schedules with plain-English labels.
 - **Advanced** — Jobs (`/advanced/jobs`), New job JSON (`/advanced/jobs/new`), Schedules cron (`/advanced/schedules`). Job detail stays at `/jobs/:id`.
 
-There is no catalog, no tool builder, and no “my tools” shelf: job types come from the code (`echo`, `http_callback`, legacy stubs) and from custom packs registered over the API — `POST /v1/pack-drafts`, then `POST /v1/tools/installed` and `PUT /v1/tools/installed/:toolId/settings` for runner settings.
+There is no catalog, no tool builder, and no “my tools” shelf: job types come from the code (`echo`, `http_callback`, legacy stubs) and from custom packs registered over the API — `POST /v1/pack-drafts`, then `POST /v1/tools/installed` and `PUT /v1/tools/installed/:toolId/settings` for runner settings. The third source is a **vendor handler**: a job type backed by a module named in `VENDOR_HANDLERS` and installed next to the worker — registered by env rather than over the API, and never referenced by this repo ([docs/VENDOR-HANDLERS.md](docs/VENDOR-HANDLERS.md)).
 
 ## Quickstart (Docker)
 
@@ -143,6 +144,7 @@ A run that errors or exceeds `max_duration_sec` is retried with exponential back
 | GET | `/v1/tools/installed` | Installed tools |
 | POST | `/v1/tools/installed` | Body `{ tool_id }` → add |
 | DELETE | `/v1/tools/installed/:toolId` | Remove |
+| GET | `/v1/handlers` | Registered job types (builtin + vendor) |
 | POST | `/v1/jobs` | 202 `{ id }` |
 | GET | `/v1/jobs/:id` | |
 | GET | `/v1/jobs?status=&type=` | |
