@@ -9,6 +9,10 @@ data/
 *.db-*
 .DS_Store
 
+# Vendor handler packages dropped in at deploy time (see docs/VENDOR-HANDLERS.md)
+vendor/*
+!vendor/.gitkeep
+
 # Local ops (private host/DNS wiring)
 docs/VPS.md
 

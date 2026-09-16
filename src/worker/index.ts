@@ -14,6 +14,7 @@ import { getToolSettings } from "../db/tools.js";
 import { parseRunnerConcurrency } from "../shared/toolSettings.js";
 import { tickSchedules } from "../db/schedules.js";
 import { getHandler } from "../handlers/index.js";
+import { VendorHandlerError } from "../handlers/vendor.js";
 import { runToolActions } from "../actions/index.js";
 import type { Job } from "../shared/types.js";
 import { initPackDrafts } from "../db/packDrafts.js";
@@ -120,7 +121,10 @@ async function runJob(job: Job): Promise<void> {
         : msg;
     const attempt = job.attempt;
     const backoff = Math.min(300, Math.pow(2, attempt) * 2);
-    const willRetry = attempt < job.max_attempts;
+    // A vendor handler that will not load is operator config, not a transient
+    // fault — retrying only replays the same error max_attempts times.
+    const willRetry =
+      !(err instanceof VendorHandlerError) && attempt < job.max_attempts;
     failJob(job.id, workerId, error, willRetry, backoff);
     console.log(
       `[worker] job ${job.id} failed${

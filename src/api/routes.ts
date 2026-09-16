@@ -34,7 +34,12 @@ import {
   putToolSettings,
   removeInstalledTool,
 } from "../db/tools.js";
-import { isAllowedJobType, listHandlerTypes } from "../handlers/index.js";
+import {
+  isAllowedJobType,
+  listHandlerDetails,
+  listHandlerTypes,
+} from "../handlers/index.js";
+import { getVendorHandler } from "../shared/vendorHandlers.js";
 import {
   exportFileExists,
   exportPathsForJob,
@@ -68,6 +73,9 @@ v1.use("*", requireApiKey);
 v1.get("/health", (c) =>
   c.json({ ok: true, handlers: listHandlerTypes() })
 );
+
+/** Registered job types with provenance, so clients can offer vendor types. */
+v1.get("/handlers", (c) => c.json({ handlers: listHandlerDetails() }));
 
 v1.get("/tools/catalog", (c) => {
   const hash = c.get("apiKeyHash");
@@ -157,6 +165,34 @@ v1.put("/tools/installed/:toolId/settings", async (c) => {
   return c.json({ tool_id: result.tool_id, settings: result.settings });
 });
 
+/**
+ * A vendor handler can declare its own `max_attempts` / `max_duration_sec`.
+ * They apply only when the client left the field out — a runner that knows its
+ * own budget beats the 3-attempt / 1-hour API defaults. See docs/VENDOR-HANDLERS.md.
+ */
+function vendorJobLimits(
+  type: string,
+  rawBody: unknown,
+  parsed: { max_attempts: number; max_duration_sec: number }
+): { max_attempts: number; max_duration_sec: number } {
+  const spec = getVendorHandler(type);
+  if (!spec) return parsed;
+  const body =
+    rawBody && typeof rawBody === "object"
+      ? (rawBody as Record<string, unknown>)
+      : {};
+  return {
+    max_attempts:
+      body.max_attempts === undefined && spec.max_attempts !== undefined
+        ? spec.max_attempts
+        : parsed.max_attempts,
+    max_duration_sec:
+      body.max_duration_sec === undefined && spec.max_duration_sec !== undefined
+        ? spec.max_duration_sec
+        : parsed.max_duration_sec,
+  };
+}
+
 v1.post("/jobs", async (c) => {
   let body: unknown;
   try {
@@ -179,6 +215,7 @@ v1.post("/jobs", async (c) => {
   }
   const job = createJob({
     ...parsed.data,
+    ...vendorJobLimits(parsed.data.type, body, parsed.data),
     owner_key_hash: c.get("apiKeyHash"),
   });
   return c.json({ id: job.id }, 202);
@@ -306,7 +343,10 @@ v1.post("/schedules", async (c) => {
       400
     );
   }
-  const schedule = createSchedule(parsed.data);
+  const schedule = createSchedule({
+    ...parsed.data,
+    ...vendorJobLimits(parsed.data.job_type, body, parsed.data),
+  });
   return c.json(scheduleToJson(schedule), 201);
 });
 

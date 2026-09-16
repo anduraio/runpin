@@ -1,9 +1,11 @@
 import type { Job } from "../shared/types.js";
 import { config } from "../shared/config.js";
+import { vendorHandlerEntries } from "../shared/vendorHandlers.js";
 import { getPack } from "../packs/index.js";
 import { initPackDrafts } from "../db/packDrafts.js";
 import { sampleResultForPack } from "../packs/sampleResult.js";
 import type { PackManifest } from "../packs/types.js";
+import { vendorHandler } from "./vendor.js";
 
 export type HandlerContext = {
   job: Job;
@@ -105,6 +107,25 @@ for (const [type, youGet] of Object.entries(LEGACY_STUBS)) {
   handlers[type] = stubHandler(type, youGet);
 }
 
+const builtinTypes = new Set(Object.keys(handlers));
+const vendorTitles = new Map<string, string>();
+
+/**
+ * Vendor handlers: job types implemented by a module outside this repo
+ * (VENDOR_HANDLERS). They register here so the API can accept and list them,
+ * but only the worker ever imports the module — see docs/VENDOR-HANDLERS.md.
+ */
+for (const spec of vendorHandlerEntries()) {
+  if (builtinTypes.has(spec.type)) {
+    console.warn(
+      `[vendor] ignoring "${spec.type}": builtin job types cannot be replaced`
+    );
+    continue;
+  }
+  handlers[spec.type] = vendorHandler(spec);
+  if (spec.title) vendorTitles.set(spec.type, spec.title);
+}
+
 function samplePackHandler(pack: PackManifest): Handler {
   return async (ctx) => {
     ctx.setProgress({ stage: "Looking up sample results" });
@@ -133,4 +154,20 @@ export function isAllowedJobType(type: string): boolean {
 
 export function listHandlerTypes(): string[] {
   return Object.keys(handlers);
+}
+
+export type HandlerDetail = {
+  type: string;
+  source: "builtin" | "vendor";
+  /** Display name declared by a vendor spec. Builtins are titled by the UI. */
+  title?: string;
+};
+
+/** Registered handlers with their provenance, for GET /v1/handlers. */
+export function listHandlerDetails(): HandlerDetail[] {
+  return Object.keys(handlers).map((type) => ({
+    type,
+    source: builtinTypes.has(type) ? "builtin" : "vendor",
+    title: vendorTitles.get(type),
+  }));
 }

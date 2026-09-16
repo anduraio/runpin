@@ -21,4 +21,6 @@ export const config = {
   workerId: () =>
     process.env.WORKER_ID ?? `worker-${process.pid}-${Date.now()}`,
   schedulerTickMs: () => Number(process.env.SCHEDULER_TICK_MS ?? 15000),
+  /** Raw VENDOR_HANDLERS JSON — parsed in shared/vendorHandlers.ts. */
+  vendorHandlersJson: () => process.env.VENDOR_HANDLERS ?? "",
 };
