@@ -13,3 +13,4 @@ deploy
 docs
 *.md
 !README.md
+vendor/archive
