@@ -11,7 +11,11 @@ import {
   setProgress,
 } from "../db/jobs.js";
 import { getToolSettings } from "../db/tools.js";
-import { parseRunnerConcurrency } from "../shared/toolSettings.js";
+import {
+  RUNNER_CONCURRENCY_DEFAULT,
+  parseRunnerConcurrency,
+} from "../shared/toolSettings.js";
+import { getVendorHandler } from "../shared/vendorHandlers.js";
 import { tickSchedules } from "../db/schedules.js";
 import { getHandler } from "../handlers/index.js";
 import { VendorHandlerError } from "../handlers/vendor.js";
@@ -31,10 +35,19 @@ initPackDrafts();
 console.log(`[worker] starting id=${workerId} lease=${leaseSec}s`);
 console.log(`[worker] process cap=${concurrency} (per-tool limit is each runner's settings)`);
 
+/**
+ * Runs of this job's type allowed at once for its owner. A vendor type takes it
+ * from its VENDOR_HANDLERS spec (it has no settings row); everything else from
+ * the installed tool's settings. WORKER_CONCURRENCY caps both.
+ */
 function runnerConcurrency(job: {
   type: string;
   owner_key_hash: string | null;
 }): number {
+  const vendor = getVendorHandler(job.type);
+  if (vendor) {
+    return Math.min(concurrency, vendor.concurrency ?? RUNNER_CONCURRENCY_DEFAULT);
+  }
   let n = 1;
   if (job.owner_key_hash) {
     const row = getToolSettings(job.owner_key_hash, job.type);
