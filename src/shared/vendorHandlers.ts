@@ -1,4 +1,5 @@
 import { config } from "./config.js";
+import { RUNNER_CONCURRENCY_MAX } from "./toolSettings.js";
 
 /**
  * Vendor handlers — job types whose code lives outside this repo.
@@ -26,6 +27,12 @@ export type VendorHandlerSpec = {
   max_attempts?: number;
   /** Default when a client omits `max_duration_sec` (1–86400). */
   max_duration_sec?: number;
+  /**
+   * How many jobs of this type run at once per API key (1–20). Omitted = 1.
+   * WORKER_CONCURRENCY stays the process-wide ceiling. Runpin only counts
+   * runs; any finer limit (per customer, per user) is the handler's to enforce.
+   */
+  concurrency?: number;
 };
 
 /** Same rule as JobTypeId in shared/types.ts. */
@@ -107,6 +114,7 @@ export function parseVendorHandlerConfig(
         1,
         MAX_DURATION_SEC_CAP
       ),
+      concurrency: readBoundedInt(entry.concurrency, 1, RUNNER_CONCURRENCY_MAX),
     };
   }
   return specs;

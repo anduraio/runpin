@@ -29,6 +29,7 @@ VENDOR_HANDLERS='{"acme.report":{"module":"@acme/report-runner","export":"runRep
 | `title` | no | Display name for the UI. Defaults to the type id. |
 | `max_attempts` | no | Default when a client omits `max_attempts` (1–20). |
 | `max_duration_sec` | no | Default when a client omits `max_duration_sec` (1–86400). |
+| `concurrency` | no | Jobs of this type running at once per API key (1–20). Defaults to 1. `WORKER_CONCURRENCY` is still the ceiling. |
 
 Only the two `max_*` fields override a client that asked for something explicit — a client that sends
 `max_attempts: 3` gets 3.
@@ -116,8 +117,10 @@ carries the reason.
 - **Retries** — a thrown error is retried with backoff until `max_attempts`. A handler that *cannot be
   loaded* (missing module, missing export) is a config error and fails immediately instead of replaying
   the same error `max_attempts` times.
-- **Concurrency** — a vendor type has no per-tool setting, so it defaults to one at a time; the worker's
-  `WORKER_CONCURRENCY` is still the overall ceiling.
+- **Concurrency** — `concurrency` in the spec (default 1); the worker's `WORKER_CONCURRENCY` is still
+  the overall ceiling. Runpin only counts runs per API key; any finer limit is the handler's to enforce.
+  Several runs share one Node process, so the module must not keep per-run state in module-level
+  variables.
 - **Crash safety** — if the worker dies mid-run the lease expires and the job is reclaimed, so write
   your handler to be safe to run twice (`payload` carries your own idempotency key).
 
